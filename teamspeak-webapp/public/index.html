@@ -3,19 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Chat App</title>
+    <title>Socket.io Chat</title>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <h1>WebRTC Voice Chat</h1>
-    <button id="start-call">Start Call</button>
-    <audio id="remote-audio" autoplay></audio>
+    <h1>Socket.io Chat</h1>
+    <input id="messageInput" type="text" placeholder="Type a message..." />
+    <button id="sendButton">Send</button>
+    <ul id="messages"></ul>
 
-    <input type="text" id="room-id" placeholder="Enter room ID">
-    <button id="join-room">Join Room</button>
-    <audio id="remote-audio" autoplay></audio>
+    <script>
+        const socket = io();
 
+        // Handle sending messages
+        const sendButton = document.getElementById('sendButton');
+        const messageInput = document.getElementById('messageInput');
+        const messagesList = document.getElementById('messages');
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="main.js"></script>
+        sendButton.addEventListener('click', () => {
+            const message = messageInput.value;
+            socket.emit('message', message);
+            messageInput.value = ''; // Clear the input
+        });
+
+        // Handle receiving messages
+        socket.on('message', (msg) => {
+            const listItem = document.createElement('li');
+            listItem.textContent = msg;
+            messagesList.appendChild(listItem);
+        });
+    </script>
 </body>
 </html>
