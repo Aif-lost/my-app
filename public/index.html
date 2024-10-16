@@ -3,34 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TeamSpeak Web App</title>
+    <title>Text Chat Web App</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>TeamSpeak Web App</h1>
-    <div id="chat">
-        <h2>Chat</h2>
-        <ul id="messages"></ul>
-        <input type="text" id="messageInput" placeholder="Type your message..." />
-        <button id="sendButton">Send</button>
-    </div>
-    
-    <div id="controls">
-        <input type="text" id="usernameInput" placeholder="Enter your username" />
-        <button id="saveUsernameButton">Save Username</button>
-        <button id="joinChannelButton">Join Channel 1</button>
-        <button id="startCallButton" disabled>Start Call</button>
-        <button id="endCallButton" disabled>End Call</button>
-    </div>
-    
-    <div id="timer">
-        <strong>Chat resets in:</strong> <span id="timeDisplay">30:00</span>
-    </div>
-    
-    <div id="callStatus" class="not-in-call">Not in a call</div>
-    
-    <audio id="remoteAudio" autoplay></audio>
-    
+    <header>
+        <h1>Welcome to the Colorful Text Chat!</h1>
+    </header>
+
+    <main>
+        <div id="chat">
+            <h2>Chat Room</h2>
+            <ul id="messages"></ul>
+            <div id="inputArea">
+                <input type="text" id="messageInput" placeholder="Type your message..." />
+                <button id="sendButton">Send</button>
+            </div>
+        </div>
+        
+        <div id="controls">
+            <input type="text" id="usernameInput" placeholder="Enter your username" />
+            <button id="saveUsernameButton">Set Username</button>
+            <button id="joinChannelButton">Join Chat Room</button>
+        </div>
+        
+        <div id="timer">
+            <strong>Chat resets in:</strong> <span id="timeDisplay">30:00</span>
+        </div>
+    </main>
+
+    <footer>
+        <p>Enjoy your chat experience!</p>
+    </footer>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="main.js"></script>
 </body>
