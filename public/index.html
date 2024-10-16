@@ -13,18 +13,18 @@
     <ul id="messages"></ul>
 
     <h2>Voice Chat</h2>
-    <button id="startCallButton">Start Call</button>
+    <input id="roomInput" type="text" placeholder="Enter Room Name" />
+    <button id="joinRoomButton">Join Room</button>
+    <button id="startCallButton" disabled>Start Call</button>
     <button id="endCallButton" disabled>End Call</button>
     
     <audio id="remoteAudio" autoplay></audio>
 
     <script>
         const socket = io();
-        const room = "my-room"; // Define a room for voice chat
-        const localAudio = document.createElement('audio');
-        const remoteAudio = document.getElementById('remoteAudio');
         let localStream;
         let peerConnection;
+        let currentRoom = '';
 
         // Handle sending messages
         const sendButton = document.getElementById('sendButton');
@@ -44,8 +44,17 @@
             messagesList.appendChild(listItem);
         });
 
-        // Handle joining the room
-        socket.emit('join', room);
+        // Join room
+        document.getElementById('joinRoomButton').onclick = () => {
+            const room = document.getElementById('roomInput').value;
+            if (room) {
+                currentRoom = room;
+                socket.emit('join', room);
+                document.getElementById('startCallButton').disabled = false; // Enable start call button
+            } else {
+                alert('Please enter a room name!');
+            }
+        };
 
         // Handle signaling for voice chat
         socket.on('signal', async (data) => {
@@ -59,10 +68,9 @@
         // Start voice chat
         document.getElementById('startCallButton').onclick = async () => {
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            localAudio.srcObject = localStream;
-            localAudio.play();
             createPeerConnection();
 
+            // Add local audio track
             localStream.getTracks().forEach(track => {
                 peerConnection.addTrack(track, localStream);
             });
@@ -73,18 +81,24 @@
             if (peerConnection) {
                 peerConnection.close();
                 peerConnection = null;
-                remoteAudio.srcObject = null;
+                document.getElementById('remoteAudio').srcObject = null;
                 document.getElementById('endCallButton').disabled = true;
             }
         };
 
         // Create a new peer connection
         function createPeerConnection() {
-            peerConnection = new RTCPeerConnection();
+            const configuration = {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' }, // Google STUN server
+                ]
+            };
+            peerConnection = new RTCPeerConnection(configuration);
+
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
                     socket.emit('signal', {
-                        room: room,
+                        room: currentRoom,
                         signal: {
                             type: 'ice',
                             candidate: event.candidate,
@@ -92,7 +106,9 @@
                     });
                 }
             };
+
             peerConnection.ontrack = (event) => {
+                const remoteAudio = document.getElementById('remoteAudio');
                 remoteAudio.srcObject = event.streams[0];
                 document.getElementById('endCallButton').disabled = false;
             };
@@ -101,7 +117,7 @@
                 return peerConnection.setLocalDescription(offer);
             }).then(() => {
                 socket.emit('signal', {
-                    room: room,
+                    room: currentRoom,
                     signal: peerConnection.localDescription,
                 });
             });
