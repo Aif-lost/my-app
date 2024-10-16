@@ -3,6 +3,7 @@ let localStream;
 let peerConnection;
 let currentRoom = '';
 let userId;
+const peers = {};
 
 // Load or set username
 function getUsername() {
@@ -93,15 +94,10 @@ document.getElementById('sendButton').addEventListener('click', () => {
     }
 });
 
-document.getElementById('joinRoomButton').onclick = () => {
-    const room = document.getElementById('roomInput').value;
-    if (room) {
-        currentRoom = room;
-        socket.emit('join', room);
-        document.getElementById('startCallButton').disabled = false;
-    } else {
-        alert('Please enter a room name!');
-    }
+document.getElementById('joinChannelButton').onclick = () => {
+    currentRoom = 'channel1';
+    socket.emit('join', currentRoom);
+    document.getElementById('startCallButton').disabled = false;
 };
 
 // Save username
@@ -132,8 +128,55 @@ document.getElementById('startCallButton').onclick = async () => {
     if (!localStream) {
         try {
             localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const audioElement = document.getElementById('remoteAudio');
-            audioElement.srcObject = localStream;
+            socket.emit('ready', currentRoom);
+
+            // Set up peer connections for each user
+            socket.on('offer', async (id, description) => {
+                peerConnection = new RTCPeerConnection();
+                peers[id] = peerConnection;
+                await peerConnection.setRemoteDescription(description);
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                socket.emit('answer', id, peerConnection.localDescription);
+
+                peerConnection.ontrack = event => {
+                    const remoteAudio = document.getElementById('remoteAudio');
+                    remoteAudio.srcObject = event.streams[0];
+                };
+            });
+
+            socket.on('answer', (id, description) => {
+                peers[id].setRemoteDescription(description);
+            });
+
+            socket.on('ready', id => {
+                peerConnection = new RTCPeerConnection();
+                peers[id] = peerConnection;
+                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+                peerConnection.onicecandidate = event => {
+                    if (event.candidate) {
+                        socket.emit('candidate', id, event.candidate);
+                    }
+                };
+
+                peerConnection.ontrack = event => {
+                    const remoteAudio = document.getElementById('remoteAudio');
+                    remoteAudio.srcObject = event.streams[0];
+                };
+
+                peerConnection.createOffer().then(offer => {
+                    peerConnection.setLocalDescription(offer);
+                    socket.emit('offer', id, offer);
+                });
+            });
+
+            socket.on('candidate', (id, candidate) => {
+                peers[id].addIceCandidate(new RTCIceCandidate(candidate));
+            });
+
             document.getElementById('startCallButton').disabled = true;
             document.getElementById('endCallButton').disabled = false;
             updateCallStatus(true);
@@ -145,9 +188,9 @@ document.getElementById('startCallButton').onclick = async () => {
 
 document.getElementById('endCallButton').onclick = () => {
     if (localStream) {
-        const tracks = localStream.getTracks();
-        tracks.forEach((track) => track.stop());
+        localStream.getTracks().forEach(track => track.stop());
         localStream = null;
+        socket.emit('leave', currentRoom);
         document.getElementById('startCallButton').disabled = false;
         document.getElementById('endCallButton').disabled = true;
         updateCallStatus(false);
