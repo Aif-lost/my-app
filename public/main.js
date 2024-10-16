@@ -3,7 +3,6 @@ let localStream;
 let peerConnection;
 let currentRoom = '';
 let userId;
-let timerInterval;
 
 // Load or set username
 function getUsername() {
@@ -19,6 +18,46 @@ function saveUsername(username) {
 // Generate a user ID if no username is set
 function getUserId() {
     return getUsername();
+}
+
+// Initialize user ID
+userId = getUserId();
+
+// Call status indicator
+function updateCallStatus(inCall) {
+    const callStatus = document.getElementById('callStatus');
+    if (inCall) {
+        callStatus.textContent = 'In a call';
+        callStatus.classList.add('in-call');
+        callStatus.classList.remove('not-in-call');
+    } else {
+        callStatus.textContent = 'Not in a call';
+        callStatus.classList.add('not-in-call');
+        callStatus.classList.remove('in-call');
+    }
+}
+
+// Timer logic
+function startTimer(endTime) {
+    const timerDisplay = document.getElementById('timer');
+    const timerInterval = setInterval(() => {
+        const remainingTime = endTime - Date.now();
+        if (remainingTime > 0) {
+            const minutes = Math.floor(remainingTime / 60000);
+            const seconds = Math.floor((remainingTime % 60000) / 1000);
+            timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        } else {
+            clearInterval(timerInterval);
+            resetChat();
+        }
+    }, 1000);
+}
+
+// Reset chat function
+function resetChat() {
+    localStorage.removeItem('messages');
+    document.getElementById('messages').innerHTML = '';
+    socket.emit('resetTimer');
 }
 
 // Load stored messages on page load
@@ -44,53 +83,7 @@ function appendMessage(user, message) {
     messagesList.appendChild(listItem);
 }
 
-// Initialize user ID
-userId = getUserId();
-loadMessages();
-
-// Timer logic
-function startTimer(duration) {
-    let timer = duration, minutes, seconds;
-    const timerDisplay = document.getElementById('timer');
-
-    timerInterval = setInterval(() => {
-        minutes = Math.floor(timer / 60);
-        seconds = timer % 60;
-
-        timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-
-        if (--timer < 0) {
-            resetChat();
-            clearInterval(timerInterval);
-            startTimer(1800); // Restart timer for another 30 minutes
-        }
-    }, 1000);
-}
-
-// Reset chat function
-function resetChat() {
-    localStorage.removeItem('messages');
-    document.getElementById('messages').innerHTML = '';
-}
-
-// Call status indicator
-function updateCallStatus(inCall) {
-    const callStatus = document.getElementById('callStatus');
-    if (inCall) {
-        callStatus.textContent = 'In a call';
-        callStatus.classList.add('in-call');
-        callStatus.classList.remove('not-in-call');
-    } else {
-        callStatus.textContent = 'Not in a call';
-        callStatus.classList.add('not-in-call');
-        callStatus.classList.remove('in-call');
-    }
-}
-
-// Set up the timer for 30 minutes (1800 seconds)
-startTimer(1800);
-
-// Send message
+// Event listeners for the buttons
 document.getElementById('sendButton').addEventListener('click', () => {
     const messageInput = document.getElementById('messageInput');
     const message = messageInput.value;
@@ -100,13 +93,6 @@ document.getElementById('sendButton').addEventListener('click', () => {
     }
 });
 
-// Receive message
-socket.on('message', (msg) => {
-    appendMessage(msg.user, msg.text);
-    saveMessage(msg.user, msg.text);
-});
-
-// Join room for voice chat
 document.getElementById('joinRoomButton').onclick = () => {
     const room = document.getElementById('roomInput').value;
     if (room) {
@@ -116,18 +102,6 @@ document.getElementById('joinRoomButton').onclick = () => {
     } else {
         alert('Please enter a room name!');
     }
-};
-
-// Start call
-document.getElementById('startCallButton').onclick = () => {
-    // (Setup call logic here)
-    updateCallStatus(true);
-};
-
-// End call
-document.getElementById('endCallButton').onclick = () => {
-    // (End call logic here)
-    updateCallStatus(false);
 };
 
 // Save username
@@ -141,3 +115,44 @@ document.getElementById('saveUsernameButton').onclick = () => {
         alert('Please enter a valid username or leave it as default.');
     }
 };
+
+// Start the timer based on the server's end time
+socket.on('timer', (data) => {
+    startTimer(data.endTime);
+});
+
+// Receive message
+socket.on('message', (msg) => {
+    appendMessage(msg.user, msg.text);
+    saveMessage(msg.user, msg.text);
+});
+
+// Voice call handling (simplified setup)
+document.getElementById('startCallButton').onclick = async () => {
+    if (!localStream) {
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const audioElement = document.getElementById('remoteAudio');
+            audioElement.srcObject = localStream;
+            document.getElementById('startCallButton').disabled = true;
+            document.getElementById('endCallButton').disabled = false;
+            updateCallStatus(true);
+        } catch (error) {
+            console.error('Error accessing microphone:', error);
+        }
+    }
+};
+
+document.getElementById('endCallButton').onclick = () => {
+    if (localStream) {
+        const tracks = localStream.getTracks();
+        tracks.forEach((track) => track.stop());
+        localStream = null;
+        document.getElementById('startCallButton').disabled = false;
+        document.getElementById('endCallButton').disabled = true;
+        updateCallStatus(false);
+    }
+};
+
+// Load messages on page load
+loadMessages();
