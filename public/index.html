@@ -4,22 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Socket.io Chat</title>
+    <link rel="stylesheet" href="styles.css">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <h1>Socket.io Chat</h1>
-    <input id="messageInput" type="text" placeholder="Type a message..." />
-    <button id="sendButton">Send</button>
-    <ul id="messages"></ul>
+    <div class="chat-container">
+        <h1>Socket.io Chat</h1>
+        <ul id="messages" class="messages"></ul>
+        <input id="messageInput" type="text" placeholder="Type a message..." />
+        <button id="sendButton">Send</button>
 
-    <h2>Voice Chat</h2>
-    <input id="roomInput" type="text" placeholder="Enter Room Name" />
-    <button id="joinRoomButton">Join Room</button>
-    <button id="startCallButton" disabled>Start Call</button>
-    <button id="endCallButton" disabled>End Call</button>
-    
-    <audio id="remoteAudio" autoplay></audio>
-
+        <h2>Voice Chat</h2>
+        <input id="roomInput" type="text" placeholder="Enter Room Name" />
+        <button id="joinRoomButton">Join Room</button>
+        <button id="startCallButton" disabled>Start Call</button>
+        <button id="endCallButton" disabled>End Call</button>
+        
+        <audio id="remoteAudio" autoplay></audio>
+    </div>
     <script src="main.js"></script>
 </body>
 </html>
