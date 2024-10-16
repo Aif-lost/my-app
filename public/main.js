@@ -3,14 +3,22 @@ let localStream;
 let peerConnection;
 let currentRoom = '';
 let userId;
+let timerInterval;
 
-// Generate and save a user ID
+// Load or set username
+function getUsername() {
+    const savedUsername = localStorage.getItem('username');
+    return savedUsername ? savedUsername : 'User';
+}
+
+// Save the username when set by the user
+function saveUsername(username) {
+    localStorage.setItem('username', username);
+}
+
+// Generate a user ID if no username is set
 function getUserId() {
-    if (!localStorage.getItem('userId')) {
-        const id = `User ${Math.floor(Math.random() * 1000)}`;
-        localStorage.setItem('userId', id);
-    }
-    return localStorage.getItem('userId');
+    return getUsername();
 }
 
 // Load stored messages on page load
@@ -40,6 +48,48 @@ function appendMessage(user, message) {
 userId = getUserId();
 loadMessages();
 
+// Timer logic
+function startTimer(duration) {
+    let timer = duration, minutes, seconds;
+    const timerDisplay = document.getElementById('timer');
+
+    timerInterval = setInterval(() => {
+        minutes = Math.floor(timer / 60);
+        seconds = timer % 60;
+
+        timerDisplay.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+        if (--timer < 0) {
+            resetChat();
+            clearInterval(timerInterval);
+            startTimer(1800); // Restart timer for another 30 minutes
+        }
+    }, 1000);
+}
+
+// Reset chat function
+function resetChat() {
+    localStorage.removeItem('messages');
+    document.getElementById('messages').innerHTML = '';
+}
+
+// Call status indicator
+function updateCallStatus(inCall) {
+    const callStatus = document.getElementById('callStatus');
+    if (inCall) {
+        callStatus.textContent = 'In a call';
+        callStatus.classList.add('in-call');
+        callStatus.classList.remove('not-in-call');
+    } else {
+        callStatus.textContent = 'Not in a call';
+        callStatus.classList.add('not-in-call');
+        callStatus.classList.remove('in-call');
+    }
+}
+
+// Set up the timer for 30 minutes (1800 seconds)
+startTimer(1800);
+
 // Send message
 document.getElementById('sendButton').addEventListener('click', () => {
     const messageInput = document.getElementById('messageInput');
@@ -68,4 +118,26 @@ document.getElementById('joinRoomButton').onclick = () => {
     }
 };
 
-// Voice chat signaling code remains unchanged
+// Start call
+document.getElementById('startCallButton').onclick = () => {
+    // (Setup call logic here)
+    updateCallStatus(true);
+};
+
+// End call
+document.getElementById('endCallButton').onclick = () => {
+    // (End call logic here)
+    updateCallStatus(false);
+};
+
+// Save username
+document.getElementById('saveUsernameButton').onclick = () => {
+    const usernameInput = document.getElementById('usernameInput').value.trim();
+    if (usernameInput) {
+        saveUsername(usernameInput);
+        userId = getUsername();
+        alert(`Username set to ${userId}`);
+    } else {
+        alert('Please enter a valid username or leave it as default.');
+    }
+};

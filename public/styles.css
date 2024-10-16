@@ -56,3 +56,16 @@ button {
 button:hover {
     background-color: #0056b3;
 }
+
+.timer-container, #callStatus {
+    text-align: center;
+    margin: 10px 0;
+}
+
+#callStatus.in-call {
+    color: green;
+}
+
+#callStatus.not-in-call {
+    color: red;
+}

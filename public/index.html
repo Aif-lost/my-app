@@ -10,6 +10,13 @@
 <body>
     <div class="chat-container">
         <h1>Socket.io Chat</h1>
+        <div class="username-container">
+            <input id="usernameInput" type="text" placeholder="Enter your username (optional)" />
+            <button id="saveUsernameButton">Save Username</button>
+        </div>
+        <div class="timer-container">
+            <p>Chat will reset in: <span id="timer">30:00</span></p>
+        </div>
         <ul id="messages" class="messages"></ul>
         <input id="messageInput" type="text" placeholder="Type a message..." />
         <button id="sendButton">Send</button>
@@ -19,6 +26,7 @@
         <button id="joinRoomButton">Join Room</button>
         <button id="startCallButton" disabled>Start Call</button>
         <button id="endCallButton" disabled>End Call</button>
+        <p id="callStatus">Not in a call</p>
         
         <audio id="remoteAudio" autoplay></audio>
     </div>
