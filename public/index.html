@@ -12,8 +12,19 @@
     <button id="sendButton">Send</button>
     <ul id="messages"></ul>
 
+    <h2>Voice Chat</h2>
+    <button id="startCallButton">Start Call</button>
+    <button id="endCallButton" disabled>End Call</button>
+    
+    <audio id="remoteAudio" autoplay></audio>
+
     <script>
         const socket = io();
+        const room = "my-room"; // Define a room for voice chat
+        const localAudio = document.createElement('audio');
+        const remoteAudio = document.getElementById('remoteAudio');
+        let localStream;
+        let peerConnection;
 
         // Handle sending messages
         const sendButton = document.getElementById('sendButton');
@@ -32,6 +43,69 @@
             listItem.textContent = msg;
             messagesList.appendChild(listItem);
         });
+
+        // Handle joining the room
+        socket.emit('join', room);
+
+        // Handle signaling for voice chat
+        socket.on('signal', async (data) => {
+            if (!peerConnection) createPeerConnection();
+
+            if (data.signal) {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.signal));
+            }
+        });
+
+        // Start voice chat
+        document.getElementById('startCallButton').onclick = async () => {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            localAudio.srcObject = localStream;
+            localAudio.play();
+            createPeerConnection();
+
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+        };
+
+        // End voice chat
+        document.getElementById('endCallButton').onclick = () => {
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+                remoteAudio.srcObject = null;
+                document.getElementById('endCallButton').disabled = true;
+            }
+        };
+
+        // Create a new peer connection
+        function createPeerConnection() {
+            peerConnection = new RTCPeerConnection();
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.emit('signal', {
+                        room: room,
+                        signal: {
+                            type: 'ice',
+                            candidate: event.candidate,
+                        },
+                    });
+                }
+            };
+            peerConnection.ontrack = (event) => {
+                remoteAudio.srcObject = event.streams[0];
+                document.getElementById('endCallButton').disabled = false;
+            };
+
+            peerConnection.createOffer().then((offer) => {
+                return peerConnection.setLocalDescription(offer);
+            }).then(() => {
+                socket.emit('signal', {
+                    room: room,
+                    signal: peerConnection.localDescription,
+                });
+            });
+        }
     </script>
 </body>
 </html>
